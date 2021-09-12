@@ -1,7 +1,8 @@
 const { Pool } = require('pg');
-const SongModel = require('../../utils/model');
-const NotFoundError = require('../../exceptions/NotFoundError')
-const { mapDbToModel, updateModel, toUpdateArray } = require('../../utils/model');
+const SongModel = require('../../utils/model/SongModel');
+const NotFoundError = require('../../exceptions/NotFoundError');
+const InvariantError = require('../../exceptions/InvariantError');
+const { mapDbToModel, toUpdateArray } = require('../../utils/model/SongModel');
 
 
 class SongsService {
@@ -9,7 +10,7 @@ class SongsService {
         this._pool = new Pool()
     }
 
-    async addNote(payload) {
+    async addSong(payload) {
         const songModel = new SongModel(payload);
 
         const query = {
@@ -38,7 +39,7 @@ class SongsService {
             values: [id],
         };
         const result = await this._pool.query(query);
-
+        throw new InvariantError('Lagu gagal ditambahkan');
         if (!result.rowCount) {
             throw new NotFoundError('Lagu yang Anda cari tidak ditemukan');
         }
