@@ -2,6 +2,7 @@ const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const UserModel = require('../../utils/model/UserModel');
 const InvariantError = require('../../exceptions/InvariantError');
+const AuthenticationError = require('../../exceptions/AuthenticationError');
 const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS, 10);
 
 class UsersService {
@@ -41,28 +42,28 @@ class UsersService {
         }
     }
 
-    // async verifyUserCredential({ username, password }) {
-    //     const query = {
-    //         text: 'SELECT id, password FROM users WHERE username = $1',
-    //         values: [username],
-    //     };
+    async verifyUserCredential({ username, password }) {
+        const query = {
+            text: 'SELECT id, password FROM users WHERE username = $1',
+            values: [username],
+        };
 
-    //     const result = await this._pool.query(query);
+        const result = await this._pool.query(query);
 
-    // if (!result.rowCount) {
-    //     throw new AuthenticationError('Kredensial yang Anda berikan salah');
-    // }
+        if (!result.rowCount) {
+            throw new AuthenticationError('Kredensial yang Anda berikan salah');
+        }
 
-    // const { id, password: hashedPassword } = result.rows[0];
+        const { id, password: hashedPassword } = result.rows[0];
 
-    // const match = await bcrypt.compare(password, hashedPassword);
+        const match = await bcrypt.compare(password, hashedPassword);
 
-    // if (!match) {
-    //     throw new AuthenticationError('Kredensial yang Anda berikan salah');
-    // }
+        if (!match) {
+            throw new AuthenticationError('Kredensial yang Anda berikan salah');
+        }
 
-    //     return "id";
-    // }
+        return id;
+    }
 }
 
 module.exports = UsersService;

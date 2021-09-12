@@ -39,7 +39,7 @@ class SongsService {
             values: [id],
         };
         const result = await this._pool.query(query);
-        throw new InvariantError('Lagu gagal ditambahkan');
+
         if (!result.rowCount) {
             throw new NotFoundError('Lagu yang Anda cari tidak ditemukan');
         }
