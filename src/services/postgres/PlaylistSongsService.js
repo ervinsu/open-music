@@ -11,7 +11,7 @@ class PlaylistSongsService {
     async addSongToPlaylist(payload) {
         const { playlistId, userId, songId } = payload;
         await this._playlistsService.verifyPlaylistIsExist(playlistId);
-        await this._playlistsService.verifyPlaylistOwnerAccess(playlistId, userId);
+        await this._playlistsService.verifyPlaylistAccess(playlistId, userId);
 
         const newPlaylistSong = new PlaylistSongModel({ playlistId, userId, songId });
         const query = {
@@ -27,7 +27,7 @@ class PlaylistSongsService {
     }
 
     async getSongsFromPlaylistId(playlistId, userId) {
-        await this._playlistsService.verifyPlaylistOwnerAccess(playlistId, userId);
+        await this._playlistsService.verifyPlaylistAccess(playlistId, userId);
         const query = {
             text: `SELECT songs.id, songs.title, songs.performer
           FROM playlists
@@ -46,7 +46,7 @@ class PlaylistSongsService {
 
     async deleteSongFromPlaylist(playlistId, songId, userId) {
         await this._playlistsService.verifyPlaylistIsExist(playlistId);
-        await this._playlistsService.verifyPlaylistOwnerAccess(playlistId, userId);
+        await this._playlistsService.verifyPlaylistAccess(playlistId, userId);
 
         const query = {
             text: 'DELETE FROM playlistsongs WHERE playlist_id = $1 AND song_id = $2 RETURNING id',
@@ -55,7 +55,7 @@ class PlaylistSongsService {
 
         const result = await this._pool.query(query);
 
-        if (!result.rows.length) {
+        if (!result.rowCount) {
             throw new InvariantError('Lagu gagal dihapus dari playlist. Id tidak ditemukan');
         }
     }
