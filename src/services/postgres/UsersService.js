@@ -64,6 +64,18 @@ class UsersService {
 
         return id;
     }
+
+    async verifyUserValid(userId) {
+        const query = {
+            text: 'SELECT id FROM users WHERE id = $1',
+            values: [userId],
+        };
+        const result = await this._pool.query(query);
+
+        if (!result.rowCount) {
+            throw new AuthenticationError('Kredensial yang Anda berikan salah');
+        }
+    }
 }
 
 module.exports = UsersService;

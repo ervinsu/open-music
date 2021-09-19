@@ -81,5 +81,18 @@ class SongsService {
             throw new Error('Terdapat kesalahan pada sistem');
         }
     }
+
+    async verifySongIsExist(id) {
+        const query = {
+            text: 'SELECT id FROM songs WHERE id = $1',
+            values: [id],
+        };
+
+        const result = await this._pool.query(query);
+
+        if (!result.rowCount) {
+            throw new NotFoundError('Lagu gagal ditambah. Id tidak ditemukan');
+        }
+    }
 }
 module.exports = SongsService;
