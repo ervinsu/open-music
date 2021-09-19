@@ -34,9 +34,6 @@ class PlaylistsService {
             values: [userId],
         };
         const result = await this._pool.query(query);
-        // INNER JOIN users ON playlists.owner = users.id  
-        // LEFT JOIN collaborations ON collaborations.playlist_id = playlists.id
-        // OR collaborations.user_id = $1
 
         return result.rows;
     }
