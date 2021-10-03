@@ -4,7 +4,7 @@ const amqp = require('amqplib');
 const PlaylistService = require('./services/postgres/PlaylistService');
 const PlaylistSongService = require('./services/postgres/PlaylistSongService');
 const MailSender = require('./services/mail/MailSender');
-const Listener = require('./services/listener/listener');
+const Listener = require('./services/listener/Listener');
 const CacheService = require('../src/services/cache/CacheService');
 
 const init = async () => {
