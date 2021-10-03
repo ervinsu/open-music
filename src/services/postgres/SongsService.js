@@ -6,8 +6,9 @@ const { mapDbToModel, toUpdateArray } = require('../../utils/model/SongModel');
 
 
 class SongsService {
-    constructor() {
-        this._pool = new Pool()
+    constructor(cacheService) {
+        this._pool = new Pool();
+        this._cacheService = cacheService;
     }
 
     async addSong(payload) {
@@ -24,16 +25,26 @@ class SongsService {
             throw new InvariantError('Lagu gagal ditambahkan');
         }
 
+        await this._cacheService.delete('songs:all-songs');
         return result.rows[0].id;
     }
 
 
     async getSongs() {
+        const resultCache = await this._cacheService.get('songs:all-songs');
+        if (resultCache) {
+            return resultCache;
+        }
         const result = await this._pool.query('SELECT id, title, performer FROM songs');
+        await this._cacheService.set('songs:all-songs', JSON.stringify(result.rows));
         return result.rows;
     }
 
     async getSongById(id) {
+        const resultCache = await this._cacheService.get(`songs:${id}`);
+        if (resultCache) {
+            return resultCache;
+        }
         const query = {
             text: 'SELECT * FROM songs WHERE id = $1',
             values: [id],
@@ -43,7 +54,7 @@ class SongsService {
         if (!result.rowCount) {
             throw new NotFoundError('Lagu yang Anda cari tidak ditemukan');
         }
-
+        await this._cacheService.set(`songs:${id}`, JSON.stringify(result.rows.map(mapDbToModel)[0]));
         return result.rows.map(mapDbToModel)[0];
     }
 
@@ -59,6 +70,8 @@ class SongsService {
         if (!result.rowCount) {
             throw new NotFoundError('Gagal memperbarui Lagu. Id tidak ditemukan');
         }
+        await this._cacheService.delete(`songs:${id}`);
+        await this._cacheService.delete('songs:all-songs');
     }
 
     async deleteSongById(id) {
@@ -72,6 +85,8 @@ class SongsService {
         if (!result.rowCount) {
             throw new NotFoundError('Lagu gagal dihapus. Id tidak ditemukan');
         }
+        await this._cacheService.delete(`songs:${id}`);
+        await this._cacheService.delete('songs:all-songs');
     }
 
     async truncateTable() {

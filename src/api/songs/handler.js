@@ -9,10 +9,10 @@ class SongsHandler {
         autoBind(this);
     }
 
-    async postSongHandler(request, h) {
-        this._validator.validatePostSongPayload(request.payload);
+    async postSongHandler({ payload }, h) {
+        this._validator.validatePostSongPayload(payload);
 
-        const newSongId = await this._service.addSong(request.payload);
+        const newSongId = await this._service.addSong(payload);
 
         return successResponse(h, {
             responseMessage: 'Lagu berhasil ditambahkan',

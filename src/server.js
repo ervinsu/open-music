@@ -2,6 +2,8 @@ require('dotenv').config();
 
 const Hapi = require('@hapi/hapi');
 const Jwt = require('@hapi/jwt');
+const path = require('path');
+const Inert = require('@hapi/inert');
 
 const songs = require('./api/songs');
 const SongsValidator = require('./validator/songs');
@@ -27,13 +29,25 @@ const collaborations = require('./api/collaborations');
 const CollaborationsService = require('./services/postgres/CollaborationsService');
 const CollaborationsValidator = require('./validator/collaborations');
 
+const _exports = require('./api/exports');
+const producerService = require('./services/broker/ProducerService');
+const ExportsValidator = require('./validator/exports');
+
+const uploads = require('./api/uploads');
+const StorageService = require('./services/storage/StorageService');
+const UploadsValidator = require('./validator/uploads');
+
+const CacheService = require('./services/cache/CacheService');
+
 const init = async () => {
-    const songsService = new SongsService();
+    const cacheService = new CacheService();
+    const songsService = new SongsService(cacheService);
     const usersService = new UsersService();
     const authenticationsService = new AuthenticationsService();
-    const playlistsService = new PlaylistsService();
-    const playlistSongsService = new PlaylistSongsService(playlistsService);
-    const collaborationsService = new CollaborationsService();
+    const playlistsService = new PlaylistsService(cacheService);
+    const playlistSongsService = new PlaylistSongsService(playlistsService, cacheService);
+    const collaborationsService = new CollaborationsService(cacheService);
+    const storageService = new StorageService(path.resolve(__dirname, 'uploads/file/pictures'));
 
     const server = Hapi.server({
         port: process.env.port,
@@ -49,6 +63,9 @@ const init = async () => {
         {
             plugin: Jwt,
         },
+        {
+            plugin: Inert,
+        }
     ]);
 
 
@@ -112,6 +129,21 @@ const init = async () => {
                 validator: CollaborationsValidator,
             },
         },
+        {
+            plugin: _exports,
+            options: {
+                producerService,
+                playlistsService,
+                validator: ExportsValidator,
+            },
+        },
+        {
+            plugin: uploads,
+            options: {
+                storageService: storageService,
+                validator: UploadsValidator,
+            },
+        }
     ]);
 
     await server.start();
