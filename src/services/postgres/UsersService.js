@@ -3,79 +3,80 @@ const bcrypt = require('bcrypt');
 const UserModel = require('../../utils/model/UserModel');
 const InvariantError = require('../../exceptions/InvariantError');
 const AuthenticationError = require('../../exceptions/AuthenticationError');
+
 const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS, 10);
 
 class UsersService {
-    constructor() {
-        this._pool = new Pool()
+  constructor() {
+    this._pool = new Pool();
+  }
+
+  async addUser(payload) {
+    await this.verifyNewUsername(payload);
+    const hashedPassword = await bcrypt.hash(payload.password, SALT_ROUNDS);
+    const userModel = new UserModel(payload, hashedPassword);
+
+    const query = {
+      text: 'INSERT INTO users VALUES($1, $2, $3, $4) RETURNING id',
+      values: userModel.toInsertArray(),
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows[0].id) {
+      throw new InvariantError('User gagal ditambahkan');
     }
 
-    async addUser(payload) {
-        await this.verifyNewUsername(payload);
-        const hashedPassword = await bcrypt.hash(payload.password, SALT_ROUNDS);
-        const userModel = new UserModel(payload, hashedPassword);
+    return result.rows[0].id;
+  }
 
-        const query = {
-            text: 'INSERT INTO users VALUES($1, $2, $3, $4) RETURNING id',
-            values: userModel.toInsertArray(),
-        };
+  async verifyNewUsername({ username }) {
+    const query = {
+      text: 'SELECT username FROM users WHERE username = $1',
+      values: [username],
+    };
 
-        const result = await this._pool.query(query);
+    const result = await this._pool.query(query);
 
-        if (!result.rows[0].id) {
-            throw new InvariantError('User gagal ditambahkan');
-        }
+    if (result.rowCount) {
+      throw new InvariantError('Gagal menambahkan user. Username sudah digunakan.');
+    }
+  }
 
-        return result.rows[0].id;
+  async verifyUserCredential({ username, password }) {
+    const query = {
+      text: 'SELECT id, password FROM users WHERE username = $1',
+      values: [username],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rowCount) {
+      throw new AuthenticationError('Kredensial yang Anda berikan salah');
     }
 
-    async verifyNewUsername({ username }) {
-        const query = {
-            text: 'SELECT username FROM users WHERE username = $1',
-            values: [username],
-        };
+    const { id, password: hashedPassword } = result.rows[0];
 
-        const result = await this._pool.query(query);
+    const match = await bcrypt.compare(password, hashedPassword);
 
-        if (result.rowCount) {
-            throw new InvariantError('Gagal menambahkan user. Username sudah digunakan.');
-        }
+    if (!match) {
+      throw new AuthenticationError('Kredensial yang Anda berikan salah');
     }
 
-    async verifyUserCredential({ username, password }) {
-        const query = {
-            text: 'SELECT id, password FROM users WHERE username = $1',
-            values: [username],
-        };
+    return id;
+  }
 
-        const result = await this._pool.query(query);
+  async verifyUserValid(userId) {
+    const query = {
+      text: 'SELECT id FROM users WHERE id = $1',
+      values: [userId],
+    };
+    const result = await this._pool.query(query);
 
-        if (!result.rowCount) {
-            throw new AuthenticationError('Kredensial yang Anda berikan salah');
-        }
-
-        const { id, password: hashedPassword } = result.rows[0];
-
-        const match = await bcrypt.compare(password, hashedPassword);
-
-        if (!match) {
-            throw new AuthenticationError('Kredensial yang Anda berikan salah');
-        }
-
-        return id;
+    if (!result.rowCount) {
+      throw new AuthenticationError('Kredensial yang Anda berikan salah');
     }
-
-    async verifyUserValid(userId) {
-        const query = {
-            text: 'SELECT id FROM users WHERE id = $1',
-            values: [userId],
-        };
-        const result = await this._pool.query(query);
-
-        if (!result.rowCount) {
-            throw new AuthenticationError('Kredensial yang Anda berikan salah');
-        }
-    }
+  }
 }
 
 module.exports = UsersService;
